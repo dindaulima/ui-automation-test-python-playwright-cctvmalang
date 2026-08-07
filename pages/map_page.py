@@ -1,4 +1,4 @@
-from playwright.sync_api import Locator, expect
+from playwright.sync_api import Locator, TimeoutError as PlaywrightTimeoutError, expect
 
 from pages.base_page import BasePage
 
@@ -46,8 +46,6 @@ class MapPage(BasePage):
     def popup_close_button(self) -> Locator:
         return self.popup().get_by_role("button", name="Tutup")
 
-    def video_modal(self) -> Locator:
-        return self.page.locator("#videoModal")
 
     # navigation
     def load(self):
@@ -55,6 +53,7 @@ class MapPage(BasePage):
         expect(self.kecamatan_dropdown()).to_be_visible()
         # wait for the map's own tiles/markers to finish rendering
         self.page.wait_for_function("() => window.map !== undefined")
+
 
     # functional
     def filter_by_district(self, district: str):
@@ -69,9 +68,9 @@ class MapPage(BasePage):
         return self.kecamatan_dropdown().locator("option:checked").text_content()
 
     def search(self, query: str):
+        # suggestions are rendered synchronously by the page's oninput handler,
+        # so the fill's dispatched input event leaves the list already up to date
         self.search_input().fill(query)
-        # suggestions are filtered client-side with a ~500ms debounce
-        self.page.wait_for_timeout(800)
 
     def click_first_suggestion(self):
         self.page.evaluate(
@@ -79,6 +78,18 @@ class MapPage(BasePage):
         )
         self.suggestion_items().first.click()
         self.page.wait_for_function("() => window.__searchIdle === true")
+
+    def click_search_button(self):
+        self.page.evaluate(
+            "() => { window.__searchButtonIdle = false; window.map.once('moveend', () => { window.__searchButtonIdle = true; }); }"
+        )
+        self.search_button().click()
+        try:
+            self.page.wait_for_function("() => window.__searchButtonIdle === true", timeout=3000)
+        except PlaywrightTimeoutError:
+            # the map may legitimately not move (e.g. no match); the caller's
+            # assertion on map state is what actually verifies the outcome
+            pass
 
     def click_largest_cluster(self):
         self.page.evaluate(
