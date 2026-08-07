@@ -31,3 +31,11 @@ def test_map_zoom_out_decreases_zoom_level(map_page):
     map_page.zoom_out()
 
     map_page.wait_for_zoom_level(initial_zoom - 1)
+
+#TC4: Clicking a cluster marker zooms the map in (cluster expansion)
+def test_clicking_cluster_zooms_map_in(map_page):
+    initial_zoom = map_page.get_zoom_level()
+
+    map_page.click_largest_cluster()
+
+    assert map_page.get_zoom_level() > initial_zoom
