@@ -37,6 +37,9 @@ class MapPage(BasePage):
     def popup(self) -> Locator:
         return self.page.locator(".leaflet-popup-content")
 
+    def popup_heading(self) -> Locator:
+        return self.popup().locator("h3")
+
     def popup_view_detail_button(self) -> Locator:
         return self.popup().get_by_role("button", name="Lihat Detail")
 
@@ -60,6 +63,7 @@ class MapPage(BasePage):
         )
         self.kecamatan_dropdown().select_option(label=district)
         self.page.wait_for_function("() => window.__districtIdle === true")
+        self.page.wait_for_function("() => window.markerClusterGroup.getLayers().length >0")
 
     def selected_district(self) -> str:
         return self.kecamatan_dropdown().locator("option:checked").text_content()
@@ -75,6 +79,36 @@ class MapPage(BasePage):
         )
         self.suggestion_items().first.click()
         self.page.wait_for_function("() => window.__searchIdle === true")
+
+    def click_largest_cluster(self):
+        self.page.evaluate(
+            "() => { window.__clusterZoomed = false; window.map.once('zoomend', () => { window.__clusterZoomed = true; }); }"
+        )
+        self.page.evaluate(
+            "() => { const clusters = [...document.querySelectorAll('.marker-cluster')];"
+            " clusters.reduce((a, b) => (parseInt(b.textContent) > parseInt(a.textContent) ? b : a)).click(); }"
+        )
+        self.page.wait_for_function("() => window.__clusterZoomed === true")
+
+    def click_first_camera_marker(self):
+        # clicked via JS: Playwright's pointer-based click moves real focus onto the marker icon,
+        # which trips a "panOnFocus" bug in the site's Leaflet setup (NaN LatLng) and silently
+        # swallows the popup open; a plain DOM click sidesteps that.
+        self.page.wait_for_function("() => document.querySelectorAll('img[alt=\"Marker\"]').length > 0")
+        self.page.evaluate("() => document.querySelector('img[alt=\"Marker\"]').click()")
+
+    def hover_first_visible_camera_marker(self):
+        # cluster expansion scatters markers across a much larger area than the viewport;
+        # only hover one that Playwright can actually move the mouse onto.
+        self.page.wait_for_function("() => document.querySelectorAll('img[alt=\"Marker\"]').length > 0")
+        viewport = self.page.viewport_size
+        markers = self.camera_markers()
+        for i in range(markers.count()):
+            box = markers.nth(i).bounding_box()
+            if box and 0 <= box["x"] < viewport["width"] and 0 <= box["y"] < viewport["height"]:
+                markers.nth(i).hover()
+                return
+        raise AssertionError("no camera marker is within the visible viewport")
 
     def total_camera_count(self) -> int:
         return self.page.evaluate("() => window.markerClusterGroup.getLayers().length")
