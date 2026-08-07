@@ -31,8 +31,7 @@ def test_search_button_moves_map_to_result(map_page):
     zoom_before = map_page.get_zoom_level()
     map_page.search("klojen")
 
-    map_page.search_button().click()
-    map_page.page.wait_for_timeout(500)
+    map_page.click_search_button()
 
     assert map_page.get_map_center() != center_before or map_page.get_zoom_level() != zoom_before
     expect(map_page.suggestions_list()).to_be_hidden()
