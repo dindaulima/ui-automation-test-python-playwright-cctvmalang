@@ -1,4 +1,4 @@
-from playwright.sync_api import Locator, TimeoutError as PlaywrightTimeoutError, expect
+from playwright.sync_api import Locator, expect
 
 from pages.base_page import BasePage
 
@@ -12,9 +12,6 @@ class MapPage(BasePage):
 
     def search_input(self) -> Locator:
         return self.page.locator("#location-search")
-
-    def search_button(self) -> Locator:
-        return self.page.locator("#search-button")
 
     def suggestions_list(self) -> Locator:
         return self.page.locator("#suggestions-list")
@@ -51,8 +48,12 @@ class MapPage(BasePage):
     def load(self):
         self.goto(self.PATH)
         expect(self.kecamatan_dropdown()).to_be_visible()
-        # wait for the map's own tiles/markers to finish rendering
+        # window.map exists before the camera list AJAX call resolves; wait for
+        # markers to actually be populated so callers see a fully loaded map
         self.page.wait_for_function("() => window.map !== undefined")
+        self.page.wait_for_function(
+            "() => window.markerClusterGroup !== undefined && window.markerClusterGroup.getLayers().length > 0"
+        )
 
 
     # functional
@@ -78,18 +79,6 @@ class MapPage(BasePage):
         )
         self.suggestion_items().first.click()
         self.page.wait_for_function("() => window.__searchIdle === true")
-
-    def click_search_button(self):
-        self.page.evaluate(
-            "() => { window.__searchButtonIdle = false; window.map.once('moveend', () => { window.__searchButtonIdle = true; }); }"
-        )
-        self.search_button().click()
-        try:
-            self.page.wait_for_function("() => window.__searchButtonIdle === true", timeout=3000)
-        except PlaywrightTimeoutError:
-            # the map may legitimately not move (e.g. no match); the caller's
-            # assertion on map state is what actually verifies the outcome
-            pass
 
     def click_largest_cluster(self):
         self.page.evaluate(
