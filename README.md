@@ -28,13 +28,16 @@ pytest tests/test_map.py
 pytest tests/test_district_filter.py::test_selecting_district_filters_camera_count
 ```
 
-Run in parallel (via `pytest-xdist`):
+Tests run in parallel by default (`-n 2`, via `pytest-xdist`, configured in [pytest.ini](pytest.ini)). Override the worker count directly:
 
 ```bash
-pytest -n auto
+pytest -n 0      # sequential
+pytest -n auto   # one worker per CPU core
 ```
 
-The target base URL is configured in [pytest.ini](pytest.ini). By default Playwright runs headless; add `--headed` to watch the browser, or `--slowmo=500` to slow it down.
+Note: the suite drives the live `cctv.malangkota.go.id` site rather than a mock, and its backend appears to serialize requests rather than handle them concurrently — so higher worker counts (`-n auto`) can cause navigation timeouts or even run slower than `-n 2`, and `-n 2` itself isn't reliably faster than sequential. `-n 2` is the safest default we found for this target; it's kept mainly to demonstrate the framework's parallel-execution support.
+
+The target base URL is configured via `--base-url` in [pytest.ini](pytest.ini)'s `addopts` (not the `base_url` ini key — `pytest-base-url` doesn't propagate that to `pytest-xdist` worker processes). By default Playwright runs headless; add `--headed` to watch the browser, or `--slowmo=500` to slow it down.
 
 ## Project structure
 
@@ -46,14 +49,13 @@ pages/                  # Page Object Model
 
 tests/
   conftest.py              # shared fixtures (map_page)
-  test_map.py               # map load, zoom in/out
+  test_map_cluster.py       # map load, zoom in/out
   test_district_filter.py    # filtering cameras by district (kecamatan)
   test_location_search.py     # location search & suggestions
-  test_map_cluster_marker.py   # marker/cluster popup interactions (planned)
-  test_camera_stream.py         # camera pin -> live video stream (planned)
+  test_camera_stream.py         # camera pin -> live video stream
 ```
 
 ## Notes
 
 - Tests interact with the map's Leaflet/marker-cluster internals (`window.map`, `window.markerClusterGroup`) to wait for animations and read state deterministically instead of relying on fixed sleeps.
-- `test_map_cluster_marker.py` and `test_camera_stream.py` currently only document their planned test cases (TC12–TC19) and are not yet implemented.
+

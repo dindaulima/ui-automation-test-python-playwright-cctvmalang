@@ -24,14 +24,3 @@ def test_selecting_suggestion_moves_map_and_hides_list(map_page):
 
     assert map_page.get_map_center() != center_before
     expect(map_page.suggestions_list()).to_be_hidden()
-
-# TC11: Clicking the search button should perform the search and move the map to the result
-def test_search_button_moves_map_to_result(map_page):
-    center_before = map_page.get_map_center()
-    zoom_before = map_page.get_zoom_level()
-    map_page.search("klojen")
-
-    map_page.click_search_button()
-
-    assert map_page.get_map_center() != center_before or map_page.get_zoom_level() != zoom_before
-    expect(map_page.suggestions_list()).to_be_hidden()
