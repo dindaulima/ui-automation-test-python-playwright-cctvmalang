@@ -39,6 +39,12 @@ Note: the suite drives the live `cctv.malangkota.go.id` site rather than a mock,
 
 The target base URL is configured via `--base-url` in [pytest.ini](pytest.ini)'s `addopts` (not the `base_url` ini key — `pytest-base-url` doesn't propagate that to `pytest-xdist` worker processes). By default Playwright runs headless; add `--headed` to watch the browser, or `--slowmo=500` to slow it down.
 
+Playwright traces are captured on failure (`--tracing=retain-on-failure` in `pytest.ini`) and saved under `test-results/`. Inspect one with:
+
+```bash
+playwright show-trace test-results/<test-folder>/trace.zip
+```
+
 ## Project structure
 
 ```
