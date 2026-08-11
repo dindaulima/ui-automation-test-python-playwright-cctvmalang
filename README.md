@@ -12,8 +12,10 @@ End-to-end UI tests for the [Sebaran CCTV Malang](https://cctv.malangkota.go.id/
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-playwright install
+playwright install chrome
 ```
+
+Tests run against the `chrome` browser channel (see `--browser-channel=chrome` in [pytest.ini](pytest.ini)), so `playwright install chrome` is required — the plain `playwright install` only fetches Playwright's bundled Chromium/Firefox/WebKit, not the Chrome channel. This won't conflict with an existing system Chrome install; it downloads a separate copy into Playwright's own cache directory.
 
 ## Running the tests
 
